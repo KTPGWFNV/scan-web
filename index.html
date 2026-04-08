@@ -1,11 +1,18 @@
 <!DOCTYPE html>
 <html>
 <head>
+<link rel="icon" type="image/png" href="PIC.png">
+
 <meta charset="UTF-8">
 <title>QR Kho PRO v4</title>
 
 <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+
+<script src="https://unpkg.com/docx@8.0.2/build/index.js"></script>
 <style>
 
 /* cố định thanh trên */
@@ -157,6 +164,110 @@ margin:auto;
 margin-top:80px;
 }
 
+/* ==========================
+   PRINT ONLY LABEL
+========================== */
+
+@media print {
+
+/* Ẩn toàn bộ web */
+
+body *{
+visibility:hidden;
+}
+
+/* Chỉ hiện tem */
+
+#qrPrintArea,
+#qrPrintArea *{
+visibility:visible;
+}
+
+/* Đưa tem lên góc */
+
+#qrPrintArea{
+position:absolute;
+top:0;
+left:0;
+}
+
+/* Mỗi tem = 1 trang */
+
+.printLabel{
+
+width:6cm;
+height:8cm;
+
+margin:0;
+
+page-break-after:always;
+
+}
+
+/* Khổ giấy */
+
+@page{
+
+size:6cm 8cm;
+margin:0;
+
+}
+
+}
+
+/* ===========================
+   PRINT QR LABEL
+=========================== */
+
+.printLabel{
+
+width:6cm;
+height:8cm;
+
+border:2px solid black;
+
+display:flex;
+
+flex-direction:column;
+
+justify-content:space-between;   /* ⭐ thêm dòng này */
+
+padding:4px;
+
+box-sizing:border-box;
+
+page-break-after:always;
+
+}
+
+.qrBox{
+
+margin-right:6px;
+
+}
+
+.labelTable{
+
+font-size:9px;
+
+border-collapse:collapse;
+
+width:100%;
+
+}
+
+.labelTable td{
+
+border:1px solid black;
+
+padding:3px;
+
+text-align:center;
+
+font-size:10px;   /* tăng size */
+
+}
+
 </style>
 
 </head>
@@ -204,7 +315,16 @@ margin-top:80px;
 
 <button class="tabBtn" onclick="showTab('exportList',this)">📤 List xuất hàng</button>
 
+<button class="tabBtn" onclick="showTab('dataMaster',this)">
+📦 DATA MASTER
+</button>
+
 <button class="tabBtn" onclick="showTab('users',this)">👤 Users</button>
+
+<button class="tabBtn"
+onclick="showTab('printQR',this)">
+🖨️ IN QR
+</button>
 
 <button onclick="backupData()">📦 Backup</button>
 
@@ -213,22 +333,6 @@ margin-top:80px;
 </div>
 
 
-<!-- IMPORT -->
-
-<div id="importSection">
-
-<h2>📥 Import DATA</h2>
-
-<div class="box">
-
-<input type="file" id="fileInput">
-
-<button onclick="importExcel()">Import</button>
-
-</div> <!-- box import -->
-
-</div> <!-- importSection -->
-
 </div> <!-- headerFixed -->
 
 <!-- NHAP TAB -->
@@ -236,6 +340,23 @@ margin-top:80px;
 <div id="nhap" class="tab">
 
 <h2>📥 Scan Nhập</h2>
+
+
+<!-- IMPORT -->
+
+<div id="importSection">
+
+<h2>📦 Import DATA</h2>
+
+<div class="box">
+
+<input type="file" id="fileInput">
+
+<button onclick="importExcel()">Import</button>
+
+</div>
+
+</div>
 
 <input id="qrInputNhap"
 placeholder="Scan nhập tại đây...">
@@ -264,29 +385,53 @@ placeholder="Scan nhập tại đây...">
 
 <div id="scan" class="tab">
 
-<h2>🔍 Scan QR</h2>
+<h2>🔍 Scan Xuất</h2>
 
 <input id="qrInput" placeholder="Scan tại đây...">
 
-<input id="searchBox"
-placeholder="Tìm ID..."
-oninput="searchID()">
-
+<button onclick="exportAll()">📤 XUẤT</button>
 <div class="box">
 
 <h3>📋 Danh sách đã scan</h3>
 
 <h3 id="totalKG">Tổng dòng: 0</h3>
 
-<button onclick="exportAll()">📤 XUẤT</button>
 
-<div class="tableWrap">
+<div class="tableWrap">	
 
 <table id="list"></table>
 
 </div>
 
 </div>
+
+</div>
+
+<!-- PRINT QR TAB -->
+
+<div id="printQR" class="tab">
+
+<h2>🖨️ In QR theo Form</h2>
+
+<div class="box">
+
+<input type="file" id="qrFile">
+
+<button onclick="loadQRFile()">
+📄 Load File
+</button>
+
+<button onclick="printQRPage()">
+🖨️ In
+</button>
+
+<button onclick="downloadWordQR()">
+📄 Tải Word
+</button>
+
+</div>
+
+<div id="qrPrintArea"></div>
 
 </div>
 
@@ -401,8 +546,37 @@ onclick="loadSheetNhap()">
 
 </div>
 
+</div>
+</div>
+
+<!-- DATA MASTER TAB -->
+
+<div id="dataMaster" class="tab">
+
+<h2>📦 DATA MASTER</h2>
+
+<div class="box">
+
+<input id="searchDataMaster"
+placeholder="Tìm ID hoặc TEN..."
+oninput="searchDataMaster()">
+
+<h3 id="totalDataMaster">
+Tổng ID: 0
+</h3>
+
+<div class="tableWrap">
+
+<table id="dataMasterTable"></table>
+
+</div>
+
+</div>
+
+</div>
 
 <script>
+
 // ============================
 // CONFIG
 // ============================
@@ -600,6 +774,12 @@ loadFromGoogleSheet();
 if(name==="exportList"){
 
 loadSheetNhap();
+
+}
+
+if(name==="dataMaster"){
+
+renderDataMaster();
 
 }
 }
@@ -1293,6 +1473,7 @@ document.getElementById("userTable");
 
 table.innerHTML="";
 
+
 // ===== HEADER =====
 
 let header=table.insertRow();
@@ -1308,6 +1489,8 @@ th.innerText=h;
 header.appendChild(th);
 
 });
+
+
 
 // ===== DATA =====
 
@@ -1391,6 +1574,93 @@ btn.innerText="🔒";
 delCell.appendChild(btn);
 
 });
+}
+
+// ============================
+// RENDER DATA MASTER
+// ============================
+
+function renderDataMaster(filteredData){
+
+let table=
+document.getElementById("dataMasterTable");
+
+if(!table) return;
+
+table.innerHTML="";
+
+let header=table.insertRow();
+
+["STT","ID","TEN","MA"]
+.forEach(h=>{
+
+let th=document.createElement("th");
+
+th.innerText=h;
+
+header.appendChild(th);
+
+});
+
+let keys=
+Object.keys(DATA);
+
+let list=
+filteredData || keys;
+
+list.forEach((id,index)=>{
+
+let item=DATA[id][0];
+
+let row=table.insertRow();
+
+row.insertCell().innerText=index+1;
+
+row.insertCell().innerText=id;
+
+row.insertCell().innerText=item.ten || "";
+
+row.insertCell().innerText=item.ma || "";
+
+});
+
+document.getElementById("totalDataMaster")
+.innerText=
+"Tổng ID: " + list.length;
+
+}
+
+// ============================
+// SEARCH DATA MASTER
+// ============================
+
+function searchDataMaster(){
+
+let key=
+document.getElementById("searchDataMaster")
+.value.toLowerCase();
+
+let keys=
+Object.keys(DATA);
+
+let filtered=
+keys.filter(id=>{
+
+let item=DATA[id][0];
+
+return (
+
+id.toLowerCase().includes(key) ||
+
+(item.ten || "")
+.toLowerCase()
+.includes(key)
+
+);
+
+});
+
+renderDataMaster(filtered);
 
 }
 function renderNhap(){
@@ -2302,6 +2572,689 @@ totalText.innerText =
 // ============================
 // DEFAULT TODAY DATE (FIX LỆCH NGÀY)
 // ============================
+
+// ============================
+// LOAD FILE QR
+// ============================
+
+function loadQRFile(){
+
+let file=
+document.getElementById("qrFile").files[0];
+
+if(!file){
+
+alert("Chọn file Excel");
+
+return;
+
+}
+
+let reader=new FileReader();
+
+reader.onload=function(e){
+
+let wb=
+XLSX.read(e.target.result,{type:'array'});
+
+let sheet=
+wb.Sheets[wb.SheetNames[0]];
+
+let json=
+XLSX.utils.sheet_to_json(sheet);
+
+renderQRForm(json);
+
+};
+
+reader.readAsArrayBuffer(file);
+
+}
+
+
+// ============================
+// GROUP MIX (gom ID trùng)
+// ============================
+
+function groupMixRows(rows){
+
+let grouped={};
+
+rows.forEach(r=>{
+
+if(!grouped[r.ID]){
+
+grouped[r.ID]=r;
+
+}
+
+});
+
+return Object.values(grouped);
+
+}
+
+
+// ============================
+// RENDER FORM
+// ============================
+
+function renderQRForm(list){
+
+let container=
+document.getElementById("qrPrintArea");
+
+container.innerHTML="";
+
+
+// FULL
+
+let fullRows=
+list.filter(r=>r.TYPE==="FULL");
+
+
+// MIX
+
+let mixRows=
+groupMixRows(
+list.filter(r=>r.TYPE==="MIX")
+);
+
+
+// FULL
+
+fullRows.forEach(row=>{
+
+createFullForm(row,container);
+
+});
+
+
+// MIX
+
+mixRows.forEach(row=>{
+
+createMixForm(row,container);
+
+});
+
+}
+
+
+// ============================
+// FORM FULL
+// ============================
+
+function createFullForm(row,container){
+
+let box=document.createElement("div");
+box.className="printLabel";
+
+
+// ===== TOP (QR + INFO) =====
+
+let top=document.createElement("div");
+top.style.display="flex";
+top.style.flex="0";
+
+
+// QR
+
+let qrDiv=document.createElement("div");
+
+new QRCode(qrDiv,{
+text:row.ID,
+width:90,
+height:90
+});
+
+qrDiv.style.marginRight="6px";
+
+
+// INFO TABLE
+
+let info=document.createElement("table");
+info.className="labelTable";
+
+info.innerHTML=`
+
+<tr>
+
+<td colspan="2"
+style="
+font-size:16px;
+font-weight:bold;
+letter-spacing:1px;
+">
+${row.ID}
+</td>
+
+<td
+style="
+font-size:12px;
+font-weight:bold;
+">
+${row.STT}
+</td>
+
+</tr>
+<tr>
+<td colspan="3">${row.TEN||""}</td>
+</tr>
+
+<tr>
+<td colspan="3">${row.MA||""}</td>
+</tr>
+
+`;
+
+top.appendChild(qrDiv);
+top.appendChild(info);
+
+
+// ===== SIZE FULL WIDTH =====
+
+function v(x){
+return x==0 ? "" : (x||"");
+}
+
+let sizeTable=document.createElement("table");
+sizeTable.className="labelTable";
+
+sizeTable.style.marginTop="4px";
+
+sizeTable.style.flex="1";   // ⭐ thêm dòng này
+
+// ===== AUTO SIZE 5 Ô / DÒNG =====
+
+let sizes=Object.keys(row)
+.filter(k=>
+
+k!=="STT" &&
+k!=="ID" &&
+k!=="TEN" &&
+k!=="MA" &&
+k!=="TYPE" &&
+k!=="NGÀY" &&
+k!=="KG" &&
+
+// bỏ cột rỗng
+!k.includes("EMPTY")
+
+);
+
+function v(x){
+return x==0 ? "" : (x||"");
+}
+
+// chia nhóm 5
+
+let groups=[];
+
+for(let i=0;i<sizes.length;i+=5){
+
+groups.push(
+sizes.slice(i,i+5)
+);
+
+}
+
+// thêm KG vào nhóm cuối
+
+if(groups.length>0){
+
+groups[groups.length-1].push("KG");
+
+}
+
+let html="";
+
+groups.forEach(g=>{
+
+// SIZE row
+
+html+="<tr>";
+html+="<td><b>SIZE</b></td>";
+
+g.forEach(s=>{
+
+html+=`<td>${s}</td>`;
+
+});
+
+html+="</tr>";
+
+
+// SL row
+
+html+="<tr>";
+html+="<td><b>SL</b></td>";
+
+g.forEach(s=>{
+
+if(s==="KG"){
+
+html+=`<td>${row["KG"]||""}</td>`;
+
+}else{
+
+html+=`<td>${v(row[s])}</td>`;
+
+}
+
+});
+
+html+="</tr>";
+
+});
+
+sizeTable.innerHTML=html;
+
+box.appendChild(top);
+box.appendChild(sizeTable);
+
+container.appendChild(box);
+
+}
+
+// ============================
+// FORM MIX
+// ============================
+
+function createMixForm(row,container){
+
+let box=document.createElement("div");
+
+box.className="printLabel";
+
+
+// QR
+
+let qrDiv=document.createElement("div");
+
+qrDiv.className="qrBox";
+
+new QRCode(qrDiv,{
+text:row.ID,
+width:90,
+height:90
+});
+
+
+// TABLE
+
+let table=document.createElement("table");
+
+table.className="labelTable";
+
+table.innerHTML=`
+
+<tr>
+<td>STT</td>
+<td>${row.STT}</td>
+</tr>
+
+<tr>
+<td>ID</td>
+<td>${row.ID}</td>
+</tr>
+
+<tr>
+<td>KG</td>
+<td>${row["KG"]||""}</td>
+</tr>
+
+`;
+
+box.appendChild(qrDiv);
+box.appendChild(table);
+
+container.appendChild(box);
+
+}
+
+// ============================
+// DOWNLOAD WORD
+// ============================
+
+async function downloadWordQR(){
+
+const {
+Document,
+Packer,
+Paragraph,
+Table,
+TableRow,
+TableCell,
+ImageRun
+} = docx;
+
+let container =
+document.getElementById("qrPrintArea");
+
+if(container.children.length===0){
+
+alert("Chưa load dữ liệu");
+return;
+
+}
+
+let children=[];
+
+for(let label of container.children){
+
+// ===== QR =====
+
+let qrCanvas =
+label.querySelector("canvas");
+
+let qrImage=null;
+
+if(qrCanvas){
+
+let imgData =
+qrCanvas.toDataURL("image/png");
+
+let binary =
+atob(imgData.split(",")[1]);
+
+let array=[];
+
+for(let i=0;i<binary.length;i++){
+
+array.push(binary.charCodeAt(i));
+
+}
+
+qrImage=
+new ImageRun({
+
+data:new Uint8Array(array),
+
+transformation:{
+width:90,
+height:90
+}
+
+});
+
+}
+
+// ===== INFO TABLE =====
+
+let infoHTML =
+label.querySelector(".labelTable");
+
+let infoRows=[];
+
+for(let r=0;r<3;r++){
+
+let cells=[];
+
+for(let c=0;c<
+infoHTML.rows[r].cells.length;
+c++){
+
+cells.push(
+
+new TableCell({
+
+children:[
+
+new Paragraph(
+infoHTML.rows[r]
+.cells[c]
+.innerText
+)
+
+]
+
+})
+
+);
+
+}
+
+infoRows.push(
+
+new TableRow({
+
+children:cells
+
+})
+
+);
+
+}
+
+let infoTable=
+new Table({
+
+rows:infoRows
+
+});
+
+// ===== QR + INFO ngang =====
+
+let topTable=
+new Table({
+
+rows:[
+
+new TableRow({
+
+children:[
+
+new TableCell({
+
+children:[
+new Paragraph({
+children:[qrImage]
+})
+]
+
+}),
+
+new TableCell({
+
+children:[
+infoTable
+]
+
+})
+
+]
+
+})
+
+]
+
+});
+
+// ===== SIZE TABLE =====
+
+let tables =
+label.querySelectorAll(".labelTable");
+
+let sizeHTML =
+tables.length>1
+? tables[1]
+: null;
+
+let sizeRows=[];
+
+if(sizeHTML){
+
+for(let r=0;r<sizeHTML.rows.length;r++){
+
+let cells=[];
+
+for(let c=0;c<
+sizeHTML.rows[r].cells.length;
+c++){
+
+cells.push(
+
+new TableCell({
+
+width:{
+size:550,
+type:"dxa"
+},
+
+children:[
+
+new Paragraph(
+sizeHTML.rows[r]
+.cells[c]
+.innerText
+)
+
+]
+
+})
+
+);
+
+}
+
+sizeRows.push(
+
+new TableRow({
+
+children:cells
+
+})
+
+);
+
+}
+
+}
+
+let sizeTable=
+new Table({
+
+rows:
+sizeRows.length
+? sizeRows
+: [
+
+new TableRow({
+
+children:[
+
+new TableCell({
+
+children:[
+
+new Paragraph("")
+
+]
+
+})
+
+]
+
+})
+
+]
+
+});
+
+// ===== MAIN TABLE =====
+
+let mainTable=
+new Table({
+
+rows:[
+
+new TableRow({
+
+children:[
+
+new TableCell({
+
+children:[
+topTable
+]
+
+})
+
+]
+
+}),
+
+new TableRow({
+
+children:[
+
+new TableCell({
+
+children:[
+sizeTable
+]
+
+})
+
+]
+
+})
+
+]
+
+});
+
+children.push(mainTable);
+
+// ===== PAGE BREAK =====
+
+children.push(
+
+new Paragraph({
+pageBreakBefore:true
+})
+
+);
+
+}
+
+// ===== CREATE DOC =====
+
+let doc=
+new Document({
+
+sections:[{
+
+children:children
+
+}]
+
+});
+
+let blob=
+await Packer.toBlob(doc);
+
+let a=
+document.createElement("a");
+
+a.href=
+URL.createObjectURL(blob);
+
+a.download="QR_labels.docx";
+
+a.click();
+
+}
+// ============================
+// PRINT
+// ============================
+
+function printQRPage(){
+
+window.print();
+
+}
 
 window.addEventListener("load", function(){
 
