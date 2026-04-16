@@ -345,6 +345,8 @@ onclick="showTab('printQR',this)">
 
 <button onclick="backupData()">📦 Backup</button>
 
+
+
 <button onclick="logout()">🚪 Logout</button>
 
 </div>
@@ -370,6 +372,11 @@ onclick="showTab('printQR',this)">
 <input type="file" id="fileInput">
 
 <button onclick="importExcel()">Import</button>
+
+<button class="primaryBtn"
+onclick="refreshMaster()">
+🔄 Refresh MASTER
+</button>
 
 </div>
 
@@ -656,9 +663,11 @@ let currentUser=null;
 // GOOGLE SHEET
 // ============================
 
-function sendToGoogleSheet(row){
+async function sendToGoogleSheet(row){
 
-fetch("https://script.google.com/macros/s/AKfycby5O2TPtSJi8meNJ2ilpgS9TKYHa2ZCbygAAAE277GNStGXdlXqn8gO5GyiY8ZMF5hSeQ/exec",{
+await fetch(
+"https://script.google.com/macros/s/AKfycby5O2TPtSJi8meNJ2ilpgS9TKYHa2ZCbygAAAE277GNStGXdlXqn8gO5GyiY8ZMF5hSeQ/exec",
+{
 
 method:"POST",
 
@@ -673,8 +682,6 @@ body:JSON.stringify(row)
 });
 
 }
-
-
 // ============================
 // LOGIN
 // ============================
@@ -702,6 +709,8 @@ return;
 }
 
 currentUser=found;
+
+loadDataMaster();
 
 document.getElementById("loginPage").style.display="none";
 
@@ -884,6 +893,14 @@ let input=document.getElementById("qrInput");
 if(document.activeElement!==input) return;
 
 let value=input.value.trim();
+
+// ⭐ load lại exportedData mới nhất
+
+exportedData =
+JSON.parse(
+localStorage.getItem("DATA_EXPORTED")
+|| "[]"
+);
 
 // ❌ CHẶN ID ĐÃ XUẤT
 
@@ -1161,18 +1178,30 @@ new Date(item.date)
 
 row.onclick=()=>{
 
-if(confirm("Xoá dòng?")){
+if(confirm("Xoá toàn bộ ID này?")){
 
-data=data.filter(x=>x.id!==item.id);
+let idToDelete = item.id;
 
-save();
+// xóa toàn bộ ID trong data
+
+data = data.filter(
+x => x.id !== idToDelete
+);
+
+// lưu lại localStorage
+
+localStorage.setItem(
+"DATA_SCAN",
+JSON.stringify(data)
+);
+
+// render lại
 
 render();
 
 }
 
 };
-
 });
 
 let list = renderData || data;
@@ -1256,9 +1285,16 @@ btn.innerText="❌";
 
 btn.onclick=function(){
 
-if(confirm("Xoá dòng này?")){
+if(confirm("Xoá toàn bộ ID này?")){
 
-exportedData.splice(index,1);
+let idToDelete = item.id;
+
+// ⭐ xóa toàn bộ dòng cùng ID
+
+exportedData =
+exportedData.filter(
+x => x.id !== idToDelete
+);
 
 localStorage.setItem(
 "DATA_EXPORTED",
@@ -1712,11 +1748,25 @@ let row=table.insertRow();
 
 row.onclick=()=>{
 
-if(confirm("Xoá dòng này?")){
+if(confirm("Xoá toàn bộ ID này?")){
 
-dataNhap=dataNhap.filter(x=>x.id!==item.id);
+let idToDelete = item.id;
 
-saveNhap();
+// xóa toàn bộ ID
+
+dataNhap =
+dataNhap.filter(
+x => x.id !== idToDelete
+);
+
+// cập nhật localStorage
+
+localStorage.setItem(
+"DATA_NHAP",
+JSON.stringify(dataNhap)
+);
+
+// render lại
 
 renderNhap();
 
@@ -1825,25 +1875,24 @@ return;
 
 }
 
-// chuyển từng dòng (tránh lỗi concat)
+// chuyển sang danh sách đã xuất
+
+exportedData =
+exportedData.concat(data);
+
+// ⭐ gửi lên Google Sheet giống nhập
 
 data.forEach(item=>{
 
-if(!exportedData.find(x=>x.id===item.id)){
-
-exportedData.push({...item});
-
-}
-
-// gửi Google Sheet
-
 sendToGoogleSheet({
+
+type:"XUAT",
 
 id:item.id,
 ten:item.ten,
 ma:item.ma,
 
-size:JSON.stringify(item.sizes), // giữ size
+size:JSON.stringify(item.sizes),
 
 kg:item.kg,
 
@@ -1851,16 +1900,17 @@ date:new Date(item.date)
 .toLocaleString()
 
 });
+
 });
 
-// lưu lại ngay
+// lưu local
 
 localStorage.setItem(
 "DATA_EXPORTED",
 JSON.stringify(exportedData)
 );
 
-// xoá bảng scan
+// xoá danh sách scan
 
 data=[];
 
@@ -1878,7 +1928,6 @@ renderExport();
 alert("Đã xuất toàn bộ");
 
 }
-
 function importAll(){
 
 if(dataNhap.length===0){
@@ -2195,6 +2244,54 @@ renderImport(filtered);
 
 }
 
+async function loadDataMaster(){
+
+let url=
+"https://script.google.com/macros/s/AKfycby5O2TPtSJi8meNJ2ilpgS9TKYHa2ZCbygAAAE277GNStGXdlXqn8gO5GyiY8ZMF5hSeQ/exec?type=MASTER";
+
+try{
+
+let res=await fetch(url);
+
+DATA=await res.json();
+
+localStorage.setItem(
+"DATA_MASTER",
+JSON.stringify(DATA)
+);
+
+console.log("Đã load DATA MASTER");
+
+}catch(err){
+
+console.log("Lỗi load DATA:",err);
+
+}
+
+}
+
+async function refreshMaster(){
+
+try{
+
+await loadDataMaster();
+
+alert("✅ Đã cập nhật DATA MASTER");
+
+renderDataMaster();
+
+document.getElementById("qrInputNhap").focus();
+
+}catch(err){
+
+alert("❌ Lỗi load DATA MASTER");
+
+console.log(err);
+
+}
+
+}
+
 function applyExportListFilter(){
 
 let table =
@@ -2407,7 +2504,20 @@ let sheet=
 wb.Sheets[wb.SheetNames[0]];
 
 let json=
-XLSX.utils.sheet_to_json(sheet);
+XLSX.utils.sheet_to_json(sheet,{
+defval:"",
+raw:false
+}).map(row=>{
+
+let newRow={};
+
+Object.keys(row).forEach(k=>{
+newRow[k.trim()] = row[k];
+});
+
+return newRow;
+
+});
 
 renderQRForm(json);
 
@@ -2429,23 +2539,14 @@ rows.forEach(r=>{
 
 let id=r.ID;
 
-// nếu chưa có thì tạo từ dòng đầu
 if(!grouped[id]){
-
 grouped[id]={...r};
-
 }
 
-// ⭐ luôn kiểm tra nếu dòng này có KG thì lấy
-if("KG" in r){
+// ⭐ luôn giữ KG nếu có
+if(r.KG !== "" && r.KG !== undefined){
 
-let kg = String(r.KG).trim();
-
-if(kg !== ""){
-
-grouped[id].KG = kg;
-
-}
+grouped[id].KG = r.KG;
 
 }
 
@@ -2454,6 +2555,7 @@ grouped[id].KG = kg;
 return Object.values(grouped);
 
 }
+
 // ============================
 // RENDER FORM
 // ============================
@@ -2476,7 +2578,7 @@ list.filter(r=>r.TYPE==="FULL");
 
 let mixRows=
 groupMixRows(
-list.filter(r=>r.TYPE==="MIX")
+list.filter(r=>String(r.TYPE).trim()==="MIX")
 );
 
 
@@ -2551,17 +2653,23 @@ ${row.ID}
 
 <td
 style="
-font-size:12px;
+font-size:16px;
 font-weight:bold;
+text-align:center;
 ">
 ${row.STT}
 </td>
 
 </tr>
 <tr>
-<td colspan="3">${row.TEN||""}</td>
+<td colspan="3"
+style="
+font-size:15px;
+font-weight:normal;
+">
+${row.TEN||""}
+</td>
 </tr>
-
 <tr>
 <td colspan="3"
 style="
@@ -2594,25 +2702,8 @@ sizeTable.style.flex="1";   // ⭐ thêm dòng này
 
 // ===== AUTO SIZE 5 Ô / DÒNG =====
 
-let sizes=Object.keys(row)
-.filter(k=>
-
-k!=="STT" &&
-k!=="ID" &&
-k!=="TEN" &&
-k!=="MA" &&
-k!=="TYPE" &&
-k!=="NGÀY" &&
-k!=="KG" &&
-
-// bỏ cột rỗng
-!k.includes("EMPTY")
-
-);
-
-function v(x){
-return x==0 ? "" : (x||"");
-}
+let sizes = Object.keys(row)
+.filter(k => Number(k) && Number(row[k]) > 0);
 
 // chia nhóm 5
 
@@ -2665,19 +2756,9 @@ if(index < 2){
 
 g.forEach(s=>{
 
-if(s==="KG"){
-
-html+=`<td style="font-size:14px;font-weight:bold;">
-${row["KG"]||""}
-</td>`;
-
-}else{
-
-html+=`<td style="font-size:14px;font-weight:bold;">
+html+=`<td style="font-size:16px;font-weight:bold;">
 ${v(row[s])}
 </td>`;
-
-}
 
 });
 
@@ -2685,6 +2766,44 @@ html+="</tr>";
 
 });
 sizeTable.innerHTML=html;
+
+// ===== DÒNG KG =====
+
+if(row["KG"]){
+
+html += `
+<tr>
+<td><b>KG</b></td>
+<td colspan="5"
+style="font-size:14px;font-weight:bold;">
+${row["KG"]}
+</td>
+</tr>
+`;
+
+}
+
+// ===== DÒNG NGÀY =====
+
+if(row["NGÀY"] && String(row["NGÀY"]).trim() !== ""){
+
+html += `
+<tr>
+<td colspan="6"
+style="
+font-size:14px;
+font-weight:bold;
+text-align:center;
+">
+${row["NGÀY"]}
+</td>
+</tr>
+`;
+
+}
+
+// ⭐ cập nhật bảng sau cùng
+sizeTable.innerHTML = html;
 
 box.appendChild(top);
 box.appendChild(sizeTable);
@@ -2719,6 +2838,7 @@ width:100,
 height:100
 });
 
+qrDiv.style.marginBottom="1cm";
 
 // TABLE
 
@@ -2730,7 +2850,13 @@ table.innerHTML=`
 
 <tr>
 <td>STT</td>
-<td>${row.STT}</td>
+<td style="
+font-size:16px;
+font-weight:bold;
+text-align:center;
+">
+${row.STT}
+</td>
 </tr>
 
 <tr>
@@ -2748,13 +2874,32 @@ ${row.ID}
 <tr>
 <td>KG</td>
 <td style="
+font-size:18px;
+font-weight:bold;
+text-align:center;
+">
+${row.KG ?? ""}
+</td>
+</tr>
+
+${
+row["NGÀY"] && String(row["NGÀY"]).trim() !== ""
+? `
+<tr>
+<td colspan="2"
+style="
 font-size:15px;
 font-weight:bold;
 text-align:center;
 ">
-${row["KG"]||""}
+${row["NGÀY"]}
 </td>
 </tr>
+`
+: ""
+}	
+
+
 
 `;
 
