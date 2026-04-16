@@ -291,6 +291,23 @@ font-size:10px;   /* tăng size */
 
 <body>
 
+<div id="scanMessage"
+style="
+position:fixed;
+top:50%;
+left:50%;
+transform:translate(-50%,-50%);
+background:#d63031;
+color:white;
+padding:18px 28px;
+border-radius:12px;
+font-weight:bold;
+display:none;
+z-index:9999;
+font-size:22px;
+box-shadow:0 4px 15px rgba(0,0,0,0.3);
+">
+</div>
 <!-- LOGIN -->
 
 <div id="loginPage">
@@ -601,6 +618,20 @@ Tổng ID: 0
 
 <script>
 
+function showMessage(msg){
+
+let box=document.getElementById("scanMessage");
+
+box.innerText=msg;
+
+box.style.display="block";
+
+setTimeout(()=>{
+box.style.display="none";
+},1200);
+
+}
+
 // ============================
 // CONFIG
 // ============================
@@ -906,7 +937,7 @@ localStorage.getItem("DATA_EXPORTED")
 
 if(exportedData.find(x=>x.id===value)){
 
-alert("❌ ID đã xuất rồi");
+showMessage("❌ ID đã xuất rồi");
 
 input.value="";
 return;
@@ -917,7 +948,7 @@ if(!value) return;
 
 if(data.find(x=>x.id===value)){
 
-alert("❌ Trùng ID");
+showMessage("❌ Trùng ID");
 
 input.value="";
 return;
@@ -926,7 +957,7 @@ return;
 
 if(!DATA[value]){
 
-alert("❌ Không có DATA");
+showMessage("❌ Không có DATA");
 
 input.value="";
 return;
@@ -937,7 +968,7 @@ return;
 
 if(!sheetNhapData.some(x=>x.id===value)){
 
-alert("❌ ID không có trong list xuất cont");
+showMessage("❌ ID không có trong list xuất cont");
 
 input.value="";
 return;
@@ -999,9 +1030,10 @@ if(!value) return;
 
 if(importedData.find(x=>x.id===value)){
 
-alert("❌ ID đã nhập");
+showMessage("❌ ID đã nhập");
 
 input.value="";
+input.focus();
 return;
 
 }
@@ -1010,7 +1042,7 @@ return;
 
 if(dataNhap.find(x=>x.id===value)){
 
-alert("❌ ID đã scan nhập rồi");
+showMessage("❌ ID đã scan nhập rồi");
 
 input.value="";
 return;
@@ -1020,7 +1052,7 @@ return;
 
 if(!DATA[value]){
 
-alert("❌ Không có ID trong DATA");
+showMessage("❌ Không có ID trong DATA");
 
 input.value="";
 return;
@@ -1265,7 +1297,10 @@ row.insertCell().innerText=item.ma;
 
 SIZES.forEach(s=>{
 
-row.insertCell().innerText=item.sizes?.[s] || 0;
+let val=item.sizes?.[s];
+
+row.insertCell().innerText =
+(val===0 || val===undefined) ? "" : val;
 
 });
 
@@ -1786,9 +1821,10 @@ row.insertCell().innerText=item.ma;
 
 SIZES.forEach(s=>{
 
-row.insertCell()
+let val=item.sizes?.[s];
 
-.innerText=item.sizes?.[s] || 0;
+row.insertCell().innerText =
+(val===0 || val===undefined) ? "" : val;
 
 });
 
@@ -2144,9 +2180,10 @@ row.insertCell().innerText=item.ma;
 
 SIZES.forEach(s=>{
 
-row.insertCell()
+let val=item.sizes?.[s];
 
-.innerText=item.sizes?.[s] || 0;
+row.insertCell().innerText =
+(val===0 || val===undefined) ? "" : val;
 
 });
 
@@ -2368,8 +2405,10 @@ row.insertCell().innerText=item.ma;
 
 SIZES.forEach(s=>{
 
-row.insertCell().innerText=
-item.size?.[s] || 0;
+let val=item.sizes?.[s];
+
+row.insertCell().innerText =
+(val===0 || val===undefined) ? "" : val;
 
 });
 
@@ -2428,8 +2467,10 @@ row.insertCell().innerText=item.ma;
 
 SIZES.forEach(s=>{
 
-row.insertCell().innerText=
-item.size?.[s] || 0;
+let val=item.sizes?.[s];
+
+row.insertCell().innerText =
+(val===0 || val===undefined) ? "" : val;
 
 });
 
