@@ -362,7 +362,17 @@ onclick="showTab('printQR',this)">
 
 <button onclick="backupData()">📦 Backup</button>
 
+<button onclick="backupAndClear()">📦 Backup + 🧹 Xóa dữ liệu</button>
 
+<span id="storageInfo"
+style="
+margin-left:15px;
+font-size:13px;
+font-weight:bold;
+color:#2d3436;
+">
+Storage: 0 MB
+</span>
 
 <button onclick="logout()">🚪 Logout</button>
 
@@ -599,7 +609,7 @@ onclick="loadSheetNhap()">
 <div class="box">
 
 <input id="searchDataMaster"
-placeholder="Tìm ID hoặc TEN..."
+placeholder="Tìm ID hoặc MA..."
 oninput="searchDataMaster()">
 
 <h3 id="totalDataMaster">
@@ -642,11 +652,7 @@ const SIZES=[
 "140","150","160","170"
 ];
 
-let DATA=
-JSON.parse(
-localStorage.getItem("DATA_MASTER")
-|| "{}"
-);
+let DATA={};
 
 let data=
 JSON.parse(
@@ -898,10 +904,7 @@ kg:Number(row["KG"]||0)
 
 });
 
-localStorage.setItem(
-"DATA_MASTER",
-JSON.stringify(DATA)
-);
+console.log("Import MASTER OK");
 
 alert("Import OK");
 
@@ -1113,6 +1116,8 @@ localStorage.setItem(
 JSON.stringify(data)
 );
 
+updateStorageInfo(); 
+
 }
 
 function saveNhap(){
@@ -1121,6 +1126,8 @@ localStorage.setItem(
 "DATA_NHAP",
 JSON.stringify(dataNhap)
 );
+
+updateStorageInfo(); 
 
 }
 
@@ -1188,6 +1195,34 @@ header.appendChild(th);
 .forEach((item,index)=>{
 
 let row=table.insertRow();
+/* ⭐ THÊM ĐOẠN NÀY */
+row.onclick=()=>{
+
+if(confirm("Xoá toàn bộ ID này?")){
+
+let idToDelete = item.id;
+
+// xóa toàn bộ ID
+data =
+data.filter(
+x => x.id !== idToDelete
+);
+
+// lưu lại
+localStorage.setItem(
+"DATA_SCAN",
+JSON.stringify(data)
+);
+
+updateStorageInfo();
+
+// render lại
+render();
+
+}
+
+};
+/* ⭐ HẾT ĐOẠN THÊM */
 
 if(item.id===highlightID){
 
@@ -1728,7 +1763,7 @@ return (
 
 id.toLowerCase().includes(key) ||
 
-(item.ten || "")
+(item.ma || "")
 .toLowerCase()
 .includes(key)
 
@@ -1879,8 +1914,27 @@ alert("Đã thêm user");
 
 function backupData(){
 
+let backupAll = {
+
+DATA_SCAN:
+localStorage.getItem("DATA_SCAN"),
+
+DATA_NHAP:
+localStorage.getItem("DATA_NHAP"),
+
+DATA_EXPORTED:
+localStorage.getItem("DATA_EXPORTED"),
+
+DATA_IMPORTED:
+localStorage.getItem("DATA_IMPORTED"),
+
+USERS:
+localStorage.getItem("USERS")
+
+};
+
 let blob=new Blob(
-[JSON.stringify(data)],
+[JSON.stringify(backupAll)],
 {type:"application/json"}
 );
 
@@ -1889,12 +1943,115 @@ let a=document.createElement("a");
 a.href=
 URL.createObjectURL(blob);
 
-a.download="backup_data.json";
+a.download=
+"backup_full_data.json";
 
 a.click();
 
 }
 
+function backupAndClear(){
+
+if(!confirm(
+"Backup xong sẽ XÓA toàn bộ dữ liệu scan.\nBạn chắc chưa?"
+)){
+return;
+}
+
+// ===== BACKUP =====
+
+let backupAll = {
+
+DATA_SCAN:
+localStorage.getItem("DATA_SCAN"),
+
+DATA_NHAP:
+localStorage.getItem("DATA_NHAP"),
+
+DATA_EXPORTED:
+localStorage.getItem("DATA_EXPORTED"),
+
+DATA_IMPORTED:
+localStorage.getItem("DATA_IMPORTED"),
+
+USERS:
+localStorage.getItem("USERS")
+
+};
+
+let blob=new Blob(
+[JSON.stringify(backupAll)],
+{type:"application/json"}
+);
+
+let a=document.createElement("a");
+
+a.href=
+URL.createObjectURL(blob);
+
+a.download=
+"backup_full_data.json";
+
+a.click();
+
+
+// ===== XÓA DỮ LIỆU =====
+
+setTimeout(()=>{
+
+localStorage.removeItem("DATA_SCAN");
+
+localStorage.removeItem("DATA_NHAP");
+
+localStorage.removeItem("DATA_IMPORTED");
+
+// reset biến
+
+data=[];
+dataNhap=[];
+importedData=[];
+
+// render lại
+
+render();
+renderNhap();
+renderImport();
+
+alert("✅ Đã backup và xóa dữ liệu");
+
+updateStorageInfo();
+
+},1000);
+
+}
+
+
+function updateStorageInfo(){
+
+let total=0;
+
+for(let key in localStorage){
+
+if(!localStorage.hasOwnProperty(key))
+continue;
+
+let value=localStorage.getItem(key);
+
+if(value){
+
+total += value.length;
+
+}
+
+}
+
+// đổi sang MB
+
+let kb=(total/1024).toFixed(0);
+
+document.getElementById("storageInfo")
+.innerText="Storage: "+kb+" KB";
+}
 
 function exportAll(){
 
@@ -2286,11 +2443,6 @@ try{
 let res=await fetch(url);
 
 DATA=await res.json();
-
-localStorage.setItem(
-"DATA_MASTER",
-JSON.stringify(DATA)
-);
 
 console.log("Đã load DATA MASTER");
 
@@ -3339,6 +3491,8 @@ window.print();
 window.addEventListener("load", function(){
 
 let today = new Date();
+
+updateStorageInfo();
 
 // fix lệch timezone (+1 ngày)
 
