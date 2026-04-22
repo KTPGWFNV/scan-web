@@ -349,9 +349,9 @@ box-shadow:0 4px 15px rgba(0,0,0,0.3);
 
 <button class="tabBtn" onclick="showTab('exportList',this)">📤 List xuất hàng</button>
 
-<button class="tabBtn" onclick="showTab('dataMaster',this)">
-📦 DATA MASTER
-</button>
+<button class="tabBtn" onclick="showTab('dataMaster',this)">📦 DATA MASTER</button>
+
+<button class="tabBtn" onclick="showTab('stockOnline',this)">📊 BÁO CÁO TỒN</button>
 
 <button class="tabBtn" onclick="showTab('users',this)">👤 Users</button>
 
@@ -458,6 +458,33 @@ placeholder="Scan nhập tại đây...">
 
 </div>
 
+<div id="stockOnline" class="tab">
+
+<h2>📊 BÁO CÁO TỒN (ONLINE)</h2>
+
+<div class="box">
+
+<input type="month"
+id="stockMonth">
+
+<button class="primaryBtn"
+onclick="loadStockOnline()">
+🔄 Load dữ liệu tồn
+</button>
+
+<h3 id="totalStockOnline">
+Tổng mã: 0
+</h3>
+
+<div class="tableWrap">
+
+<table id="stockOnlineTable"></table>
+
+</div>
+
+</div>
+
+</div>
 <!-- PRINT QR TAB -->
 
 <div id="printQR" class="tab">
@@ -838,6 +865,11 @@ if(name==="dataMaster"){
 renderDataMaster();
 
 }
+if(name==="export"){   // ⭐ thêm đoạn này
+
+filterExportByDate();
+
+}
 }
 
 // ============================
@@ -971,7 +1003,7 @@ return;
 
 // ❌ KHÔNG CÓ TRONG LIST XUẤT CONT
 
-if(!sheetNhapData.some(x=>x.id===value)){
+if(!sheetNhapData.some(x=>String(x.id).trim()===value)){
 
 showMessage("❌ ID không có trong list xuất cont");
 
@@ -1300,6 +1332,7 @@ let header=table.insertRow();
 
 [
 "STT",
+"NOTE", 
 "ID",
 "TEN",
 "MA",
@@ -1328,6 +1361,8 @@ header.appendChild(th);
 let row=table.insertRow();
 
 row.insertCell().innerText=index+1;
+
+row.insertCell().innerText=item.note || "";
 
 row.insertCell().innerText=item.id;
 
@@ -2066,7 +2101,7 @@ document.getElementById("storageInfo")
 .innerText="Storage: "+kb+" KB";
 }
 
-function exportAll(){
+async function exportAll(){
 
 if(data.length===0){
 
@@ -2081,11 +2116,12 @@ return;
 exportedData =
 exportedData.concat(data);
 
-// ⭐ gửi lên Google Sheet giống nhập
 
-data.forEach(item=>{
+// ⭐ gửi Google Sheet có delay
 
-sendToGoogleSheet({
+for (let item of data){
+
+await sendToGoogleSheet({
 
 type:"XUAT",
 
@@ -2093,7 +2129,7 @@ id:item.id,
 ten:item.ten,
 ma:item.ma,
 
-size:JSON.stringify(item.sizes),
+sizes:JSON.stringify(item.sizes),
 
 kg:item.kg,
 
@@ -2102,7 +2138,10 @@ date:new Date(item.date)
 
 });
 
-});
+await new Promise(r=>setTimeout(r,100));
+
+}
+
 
 // lưu local
 
@@ -2129,7 +2168,8 @@ renderExport();
 alert("Đã xuất toàn bộ");
 
 }
-function importAll(){
+
+async function importAll(){
 
 if(dataNhap.length===0){
 
@@ -2144,11 +2184,12 @@ return;
 importedData=
 importedData.concat(dataNhap);
 
-// gửi lên Google Sheet
 
-dataNhap.forEach(item=>{
+// ⭐ gửi Google Sheet có delay
 
-sendToGoogleSheet({
+for (let item of dataNhap){
+
+await sendToGoogleSheet({
 
 type:"NHAP",
 
@@ -2156,7 +2197,7 @@ id:item.id,
 ten:item.ten,
 ma:item.ma,
 
-size:JSON.stringify(item.sizes),
+sizes:JSON.stringify(item.sizes),
 
 kg:item.kg,
 
@@ -2165,7 +2206,10 @@ date:new Date(item.date)
 
 });
 
-});
+await new Promise(r=>setTimeout(r,100));
+
+}
+
 
 // xóa danh sách scan nhập
 
@@ -2189,6 +2233,7 @@ renderImport();
 alert("✅ Đã nhập dữ liệu");
 
 }
+
 // ===== LOAD DATA TỪ GOOGLE SHEET =====
 
 
@@ -2207,6 +2252,7 @@ let header=table.insertRow();
 
 [
 "STT",
+"NOTE",
 "ID",
 "TEN",
 "MA",
@@ -2217,117 +2263,15 @@ let header=table.insertRow();
 "NGÀY",
 "XÓA"
 ]
-.forEach((h,index)=>{
+.forEach(h=>{
 
 let th=document.createElement("th");
 
-// ===== ID =====
-if(index===1){
-
-let input=document.createElement("input");
-
-input.placeholder="ID";
-
-input.onkeydown=function(e){
-
-if(e.key==="Enter"){
-
-if(!this.value){
-filterID="";
-filterTEN="";
-filterMA="";
-renderImport();
-return;
-}
-
-filterID=this.value.toLowerCase();
-
-applyImportFilter();
-
-}
-
-};
-
-th.appendChild(input);
-
-}
-
-// ===== TEN =====
-else if(index===2){
-
-let input=document.createElement("input");
-
-input.placeholder="TEN";
-
-input.onkeydown=function(e){
-
-if(e.key==="Enter"){
-
-if(!this.value){
-
-filterID="";
-filterTEN="";
-filterMA="";
-renderImport();
-return;
-
-}
-
-filterTEN=this.value.toLowerCase();
-
-applyImportFilter();
-
-}
-
-};
-
-th.appendChild(input);
-
-}
-
-// ===== MA =====
-else if(index===3){
-
-let input=document.createElement("input");
-
-input.placeholder="MA";
-
-input.onkeydown=function(e){
-
-if(e.key==="Enter"){
-
-if(!this.value){
-
-filterID="";
-filterTEN="";
-filterMA="";
-renderImport();
-return;
-
-}
-
-filterMA=this.value.toLowerCase();
-
-applyImportFilter();
-
-}
-
-};
-
-th.appendChild(input);
-
-}
-
-else{
-
 th.innerText=h;
-
-}
 
 header.appendChild(th);
 
 });
-
 
 
 (renderData || importedData)
@@ -2336,6 +2280,8 @@ header.appendChild(th);
 let row=table.insertRow();
 
 row.insertCell().innerText=index+1;
+
+row.insertCell().innerText=item.note || "";
 
 row.insertCell().innerText=item.id;
 
@@ -2406,26 +2352,30 @@ document.getElementById("totalImport")
 async function loadSheetNhap(){
 
 let url =
-"https://script.google.com/macros/s/AKfycby5O2TPtSJi8meNJ2ilpgS9TKYHa2ZCbygAAAE277GNStGXdlXqn8gO5GyiY8ZMF5hSeQ/exec?type=NHAP";
+"https://script.google.com/macros/s/AKfycby5O2TPtSJi8meNJ2ilpgS9TKYHa2ZCbygAAAE277GNStGXdlXqn8gO5GyiY8ZMF5hSeQ/exec?type=LIST&nocache="
++ new Date().getTime();   // ⭐ chống cache
 
 try{
 
-let res=await fetch(url);
+sheetNhapData = [];   // ⭐ reset dữ liệu cũ
 
-sheetNhapData=await res.json();
+let res = await fetch(url);
+
+let data = await res.json();
+
+sheetNhapData = data;
 
 renderExportList();
 
-console.log("Đã load sheet nhap");
+console.log("Đã load LIST_XUAT_CONT");
 
 }catch(err){
 
-console.log("Lỗi load sheet nhap:",err);
+console.log("Lỗi load LIST:",err);
 
 }
 
 }
-
 function applyImportFilter(){
 
 let filtered = importedData.filter(x=>{
@@ -3549,6 +3499,265 @@ if(importTo)
 importTo.value = todayStr;
 
 });
+
+async function loadStockOnline(){
+
+// ===== LOAD NHẬP =====
+
+let urlNhap =
+"https://script.google.com/macros/s/AKfycby5O2TPtSJi8meNJ2ilpgS9TKYHa2ZCbygAAAE277GNStGXdlXqn8gO5GyiY8ZMF5hSeQ/exec?type=NHAP";
+
+let urlXuat =
+"https://script.google.com/macros/s/AKfycby5O2TPtSJi8meNJ2ilpgS9TKYHa2ZCbygAAAE277GNStGXdlXqn8gO5GyiY8ZMF5hSeQ/exec?type=XUAT";
+
+try{
+
+let resNhap=await fetch(urlNhap);
+let dataNhapSheet=await resNhap.json();
+
+let resXuat=await fetch(urlXuat);
+let dataXuatSheet=await resXuat.json();
+
+
+// ⭐ LỌC THEO THÁNG
+
+let monthInput =
+document.getElementById("stockMonth").value;
+
+if(monthInput){
+
+dataNhapSheet =
+dataNhapSheet.filter(item=>{
+
+if(!item.date) return false;
+
+let d=new Date(item.date);
+
+let m=d.getMonth()+1;
+
+let y=d.getFullYear();
+
+let ym =
+y+"-"+String(m).padStart(2,"0");
+
+return ym===monthInput;
+
+});
+
+
+dataXuatSheet =
+dataXuatSheet.filter(item=>{
+
+if(!item.date) return false;
+
+let d=new Date(item.date);
+
+let m=d.getMonth()+1;
+
+let y=d.getFullYear();
+
+let ym =
+y+"-"+String(m).padStart(2,"0");
+
+return ym===monthInput;
+
+});
+
+}
+
+
+// ===== TÍNH TỒN =====
+
+let map={};
+
+
+// ===== NHẬP =====
+
+dataNhapSheet.forEach(item=>{
+
+let key=item.ma;
+
+if(!map[key]){
+
+map[key]={
+
+ten:item.ten,
+ma:item.ma,
+
+nhap:0,
+xuat:0
+
+};
+
+}
+
+let sizes={};
+
+if(typeof item.sizes==="string"){
+
+try{
+
+sizes=JSON.parse(item.sizes);
+
+}catch{
+
+sizes={};
+
+}
+
+}else{
+
+sizes=item.sizes || {};
+
+}
+Object.values(sizes)
+
+.forEach(v=>{
+
+map[key].nhap+=Number(v||0);
+
+});
+
+});
+
+
+// ===== XUẤT =====
+
+dataXuatSheet.forEach(item=>{
+
+let key=item.ma;
+
+if(!map[key]){
+
+map[key]={
+
+ten:item.ten,
+ma:item.ma,
+
+nhap:0,
+xuat:0
+
+};
+
+}
+
+let sizes={};
+
+if(typeof item.sizes==="string"){
+
+try{
+
+sizes=JSON.parse(item.sizes);
+
+}catch{
+
+sizes={};
+
+}
+
+}else{
+
+sizes=item.sizes || {};
+
+}
+
+Object.values(sizes)
+
+.forEach(v=>{
+
+map[key].xuat+=Number(v||0);
+
+});
+
+});
+
+
+// ===== RENDER =====
+
+renderStockOnline(map);
+
+}catch(err){
+
+alert("❌ Lỗi load dữ liệu");
+
+console.log(err);
+
+}
+
+}
+
+function renderStockOnline(map){
+
+let table=
+document.getElementById("stockOnlineTable");
+
+table.innerHTML="";
+
+let header=table.insertRow();
+
+[
+"STT",
+"TEN",
+"MA",
+"NHẬP",
+"XUẤT",
+"TỒN"
+]
+
+.forEach(h=>{
+
+let th=document.createElement("th");
+
+th.innerText=h;
+
+header.appendChild(th);
+
+});
+
+let index=1;
+
+Object.values(map)
+
+.forEach(item=>{
+
+let ton=
+item.nhap-item.xuat;
+
+let row=table.insertRow();
+
+row.insertCell().innerText=index++;
+
+row.insertCell().innerText=item.ten;
+
+row.insertCell().innerText=item.ma;
+
+row.insertCell().innerText=item.nhap;
+
+row.insertCell().innerText=item.xuat;
+
+let cell=row.insertCell();
+
+cell.innerText=ton;
+
+
+// ⭐ tồn âm → đỏ
+
+if(ton<0){
+
+cell.style.color="red";
+cell.style.fontWeight="bold";
+
+}
+
+});
+
+document.getElementById(
+"totalStockOnline"
+).innerText=
+
+"Tổng mã: "+Object.keys(map).length;
+
+}
 
 </script>
 
