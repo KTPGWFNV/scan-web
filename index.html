@@ -825,7 +825,7 @@ body:JSON.stringify(row)
 // LOGIN
 // ============================
 
-function login(){
+async function login(){
 
 let u=
 document.getElementById("username").value;
@@ -849,7 +849,14 @@ return;
 
 currentUser=found;
 
-loadDataMaster();
+showMessage("⏳ đang load", "loading");
+
+await Promise.all([
+    loadDataMaster(),
+    loadSheetNhap()
+]);
+
+document.getElementById("scanMessage").style.display="none";
 
 document.getElementById("loginPage").style.display="none";
 
@@ -873,8 +880,6 @@ render();
 renderNhap();
 
 renderUsers();
-
-loadSheetNhap();
 
 // renderImport để sau cùng
 setTimeout(()=>{
